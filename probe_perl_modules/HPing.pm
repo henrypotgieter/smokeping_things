@@ -70,6 +70,15 @@ pings = 20
 protocol = icmp
 traceroute_hop = <#>  #define the TTL
 
+Add the following to enable the probe to your Probes config file:
+
++ HPing
+
+binary = /usr/sbin/hping3
+pings = 5
+port = 80
+
+
 DOC
 		authors => <<'DOC',
 Henry Potgieter <hpotgieter@techtutoring.ca>
