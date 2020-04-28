@@ -106,8 +106,8 @@ sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $self = $class->SUPER::new(@_);
-   
     $self->_init if $self->can('_init');
+    $self->{pingfactor} = 1000;
 
     return $self;
 }
@@ -225,8 +225,9 @@ sub pingone {
 	    /^len=\d+ ip=.+ ttl=\d+ id=\d+ icmp_seq=\d+ rtt=(\d+\.\d+) ms/ and push @times, $1;
     }
     close P;
-    
-    return sort { $a <=> $b } @times;
+    @times = map {sprintf "%.10e", $_ / $self->{pingfactor}} sort {$a <=> $b} @times;
+
+    return @times;
 }
 
 
