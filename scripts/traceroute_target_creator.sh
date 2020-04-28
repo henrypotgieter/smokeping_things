@@ -125,6 +125,7 @@ for i in $(seq 1 $hops) ; do
     host=`echo $ip_and_host | awk -F '=' '{print $4}'`
     echo "title = HOP $i - $ip_addr - $host"
     # Specify the rest of the configuration
+    echo "host = $target"
     echo "pings = 20"
     echo "protocol = $protocol"
     # If it was tcp or udp specify the port to use
