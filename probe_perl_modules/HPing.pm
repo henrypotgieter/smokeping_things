@@ -113,7 +113,7 @@ sub new {
 }
 
 sub ProbeDesc($) {
-	return "TCP, UDP and ICMP pings using hping";
+	return "TCP, UDP or ICMP pings using Hping3";
 }
 
 sub make_host {
@@ -182,11 +182,6 @@ sub make_commandline {
         }
 	
 	return ($self->{properties}{binary}, @args, $host);
-}
-
-sub ProbeDesc($){
-    my $self = shift;
-    return "tcp or udp pings using hping3";
 }
 
 sub make_host {
