@@ -27,57 +27,63 @@ sub pod_hash {
 Smokeping::probes::HPing - HPING Probe for SmokePing
 DOC
 		description => <<DOC,
-Integrate HPING probes into smokeping.  
+Integrate HPING probes into smokeping.                                          
+                                                                                
+Point variable B<binary> to your copy of hping.                                 
+                                                                                
+Can use hping for tcp, udp or icmp based pings.  Can also enable traceroute     
+mode to function to use ICMP Exceed In Transit responses for measuring             
+network latency.                                                                   
+                                                                                   
+You must give hping3 special permission for open_sockraw operation, eg:            
+setcap cap_net_raw=pe /usr/sbin/hping3                                             
+                                                                                   
+Example configurations - Targets file:
+                                                                                   
++ Test1                                                                            
+                                                                                   
+host = <host>                                                                      
+pings = 20                                                                         
+protocol = tcp                                                                     
+port = 22                                                                          
+                                                                                   
++ Test2                                                                            
+                                                                                   
+host = <host>                                                                      
+pings = 20                                                                         
+protocol = udp                                                                     
+port = 53                                                                       
+datasize = 33                                                                   
+                                                                                
++ Test3                                                                         
+                                                                                
+host = <host>                                                                   
+pings = 20                                                                      
+protocol = icmp                                                                 
+                                                                                
+To enable traceroute in a test:                                                 
+                                                                                
++ Test4                                                                         
+                                                                                
+host = <end system>                                                             
+pings = 20                                                                      
+protocol = icmp                                                                 
+traceroute_hop = <#>  #define the TTL   
 
-Point variable B<binary> to your copy of hping.
-
-Can use hping for tcp, udp or icmp based pings.  Can also enable traceroute
-mode to function to use ICMP Exceed In Transit responses for measuring 
-network latency. 
-
-You must give hping3 special permission for open_sockraw operation, eg:
-setcap cap_net_raw=pe /usr/sbin/hping3
-
-Example configurations:
-
-+ Test1
-
-host = <host>
-pings = 20
-protocol = tcp
-port = 22
-
-+ Test2
-
-host = <host>
-pings = 20
-protocol = udp
-port = 53
-datasize = 33
-
-+ Test3
-
-host = <host>
-pings = 20
-protocol = icmp
-
-To enable traceroute in a test:
-
-+ Test4
-
-host = <end system>
-pings = 20
-protocol = icmp
-traceroute_hop = <#>  #define the TTL
-
-Add the following to enable the probe to your Probes config file:
+Probe File:
 
 + HPing
 
+forks = 1
 binary = /usr/sbin/hping3
 pings = 5
 port = 80
 
+## Warning! ##
+
+Don't fork smokeping if you're going to be using it for traceroutes, simultaneous
+time exceed packets can get mixed up which will cause invalid results in your
+graphs!
 
 DOC
 		authors => <<'DOC',
@@ -106,14 +112,10 @@ sub new {
     my $proto = shift;
     my $class = ref($proto) || $proto;
     my $self = $class->SUPER::new(@_);
-   
     $self->_init if $self->can('_init');
+    $self->{pingfactor} = 1000;
 
     return $self;
-}
-
-sub ProbeDesc($) {
-	return "TCP, UDP and ICMP pings using hping";
 }
 
 sub make_host {
@@ -164,16 +166,16 @@ sub make_commandline {
 	push @args, $self->count_args($count);
         if ($target->{vars}{protocol} eq "tcp")
         {
-		unshift @args, "-S";
+		unshift @args, "-S --fast";
 
         }
         elsif ($target->{vars}{protocol} eq "udp")
         {
-		unshift @args, "-2";
+		unshift @args, "-2 --fast";
         }
         elsif ($target->{vars}{protocol} eq "icmp")
         {
-		unshift @args, "-1";
+		unshift @args, "-1 --fast";
         }
 
         if ($target->{vars}{traceroute_hop})
@@ -186,7 +188,7 @@ sub make_commandline {
 
 sub ProbeDesc($){
     my $self = shift;
-    return "tcp or udp pings using hping3";
+    return "TCP, UDP or ICMP pings using Hping3";
 }
 
 sub make_host {
@@ -225,8 +227,9 @@ sub pingone {
 	    /^len=\d+ ip=.+ ttl=\d+ id=\d+ icmp_seq=\d+ rtt=(\d+\.\d+) ms/ and push @times, $1;
     }
     close P;
-    
-    return sort { $a <=> $b } @times;
+    @times = map {sprintf "%.10e", $_ / $self->{pingfactor}} sort {$a <=> $b} @times;
+
+    return @times;
 }
 
 
